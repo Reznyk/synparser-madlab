@@ -54,8 +54,37 @@ export default function App() {
     let cleaned = c.replace(/^(Credits?|кредит)\s*[:-]?\s*/i, "");
     cleaned = cleaned.trim();
     cleaned = cleaned.replace(/\s*\d+\s*к?\s*подписчиков.*/i, "");
+    
+    // Удаляем текст после символов разделителей (•, |, -, и т.д.)
+    cleaned = cleaned.replace(/[•|]\s*.*$/i, "");
+    cleaned = cleaned.replace(/\s*-\s*[^-]*$/i, "");
+    
     // Здесь можно добавлять новые правила очистки
     return cleaned.trim();
+  }
+
+  // Функция для замены сокращений платформ в кредитах
+  function replacePlatformAbbreviations(credit) {
+    let cleaned = credit;
+    // Заменяем сокращения платформ на полные названия
+    cleaned = cleaned.replace(/\bтт\b/gi, "TikTok");
+    cleaned = cleaned.replace(/\bинста\b/gi, "Instagram");
+    cleaned = cleaned.replace(/\bютуб\b/gi, "YouTube");
+    cleaned = cleaned.replace(/\bдизин\b/gi, "Douyin");
+    return cleaned;
+  }
+
+  // Функция для замены сокращений в ссылках
+  function replaceLinkAbbreviations(link) {
+    let cleaned = link;
+    // Заменяем сокращения доменов на полные
+    cleaned = cleaned.replace(/youtube\.com\//gi, "youtube.com/");
+    cleaned = cleaned.replace(/youtu\.be\//gi, "youtu.be/");
+    cleaned = cleaned.replace(/instagram\.com\//gi, "instagram.com/");
+    cleaned = cleaned.replace(/tiktok\.com\//gi, "tiktok.com/");
+    cleaned = cleaned.replace(/douyin\.com\//gi, "douyin.com/");
+    cleaned = cleaned.replace(/vimeo\.com\//gi, "vimeo.com/");
+    return cleaned;
   }
 
   // Контейнер для логики очистки ссылки
@@ -330,10 +359,12 @@ export default function App() {
       // Удаляем префиксы 'Credit', 'Credits', 'кредит', а также ':', '-', пробелы после них, и лишние пробелы в начале
       if (entry.credits && Array.isArray(entry.credits)) {
         entry.credits = entry.credits.map(cleanCreditString);
+        entry.credits = entry.credits.map(replacePlatformAbbreviations);
       }
       // Очищаем ссылки от лишних слов
       if (entry.links && Array.isArray(entry.links)) {
         entry.links = entry.links.map(cleanLinkString);
+        entry.links = entry.links.map(replaceLinkAbbreviations);
       }
     }
 
