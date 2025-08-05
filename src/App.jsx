@@ -121,9 +121,11 @@ export default function App() {
     if (/^кредит\s*-\s*[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
     // паттерн: кредит имя/платформа (без тире и @)
     if (/^кредит\s+[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
+    // паттерн: кредит - @имя (без платформы)
+    if (/^кредит\s*-\s*@[^\s•]+/i.test(line)) return true;
     
     // Отладочная информация
-    if (line.includes('@') && line.includes('/')) {
+    if (line.includes('кредит') || line.includes('@')) {
       console.log('Потенциальный кредит не распознан:', line);
     }
     
