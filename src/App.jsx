@@ -59,6 +59,11 @@ export default function App() {
     cleaned = cleaned.replace(/[•|]\s*.*$/i, "");
     cleaned = cleaned.replace(/\s*-\s*[^-]*$/i, "");
     
+    // Добавляем @ в начало, если его нет
+    if (!cleaned.startsWith('@') && cleaned.includes('/')) {
+      cleaned = '@' + cleaned;
+    }
+    
     // Здесь можно добавлять новые правила очистки
     return cleaned.trim();
   }
@@ -123,9 +128,11 @@ export default function App() {
     if (/^кредит\s+[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
     // паттерн: кредит - @имя (без платформы)
     if (/^кредит\s*-\s*@[^\s•]+/i.test(line)) return true;
+    // паттерн: имя/платформа (без кредит и без @)
+    if (/^[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
     
     // Отладочная информация
-    if (line.includes('кредит') || line.includes('@')) {
+    if (line.includes('кредит') || line.includes('@') || line.includes('/')) {
       console.log('Потенциальный кредит не распознан:', line);
     }
     
