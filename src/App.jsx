@@ -53,18 +53,31 @@ export default function App() {
   function cleanCreditString(c) {
     let cleaned = c.replace(/^(Credits?|кредит)\s*[:-]?\s*/i, "");
     cleaned = cleaned.trim();
-    cleaned = cleaned.replace(/\s*\d+\s*к?\s*подписчиков.*/i, "");
-    
-    // Удаляем текст после символов разделителей (•, |, -, и т.д.)
-    cleaned = cleaned.replace(/[•|]\s*.*$/i, "");
-    cleaned = cleaned.replace(/\s*-\s*[^-]*$/i, "");
-    
-    // Добавляем @ в начало, если его нет
-    if (!cleaned.startsWith('@') && cleaned.includes('/')) {
-      cleaned = '@' + cleaned;
+
+    // Убираем обрамляющие скобки вида ( ... )
+    cleaned = cleaned.replace(/^\((.*)\)$/s, "$1").trim();
+
+    // Приводим разделитель к виду "/"
+    cleaned = cleaned.replace(/\s*\|\s*/g, " / ");
+
+    // Удаляем хвосты вида "13к подписчиков", "500к подписчиков", "млн подписчиков"
+    cleaned = cleaned.replace(/\s*[\d.,]+\s*(?:к|k|тыс|млн)?\s*подписчик\w*/gi, "");
+
+    // Удаляем текст после буллета
+    cleaned = cleaned.replace(/•\s*.*$/i, "");
+
+    // Нормализуем пробелы вокруг "/"
+    cleaned = cleaned.replace(/\s*\/\s*/g, " / ");
+
+    // Пытаемся выделить пользователя и платформу
+    const m = cleaned.match(/^@?([^\s/]+)(?:\s*\/\s*([^\s]+))?/i);
+    if (m) {
+      const user = m[1];
+      const platform = m[2] ? m[2] : "";
+      cleaned = "@" + user + (platform ? " / " + platform : "");
     }
-    
-    // Здесь можно добавлять новые правила очистки
+
+    // Финальная обрезка пробелов
     return cleaned.trim();
   }
 
