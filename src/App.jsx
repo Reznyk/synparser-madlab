@@ -92,6 +92,27 @@ export default function App() {
     return cleaned;
   }
 
+  // Контейнер для логики кредитов
+  const creditLogic = {
+    isCredit(line) {
+      if (/^Credit:/i.test(line)) return true;
+      if (/^@[^\s/]+\s*\/\s*[^\s-]+(\s*-?\s*\d+\s*\S*)?$/i.test(line)) return true;
+      if (/^@[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
+      if (/^@[^\s/]+\s*\/\s*[^\s]+\([^)]+\)$/i.test(line)) return true;
+      if (/^@[^\s/]+\s*\/\s*[^\s]+.*$/i.test(line)) return true;
+      if (/^кредит\s*-\s*@?[^\s/]+\s*\/\s*[^\s-]+(\s*-?\s*\d+\s*\S*)?$/i.test(line)) return true;
+      if (/^кредит\s+@?[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
+      if (/^кредит\s*-\s*[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
+      if (/^кредит\s+[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
+      if (/^кредит\s*-\s*@[^\s•]+/i.test(line)) return true;
+      if (/^[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
+      return false;
+    },
+    clean(raw) {
+      return replacePlatformAbbreviations(cleanCreditString(raw));
+    }
+  };
+
   // Контейнер для логики очистки ссылки
   function cleanLinkString(link) {
     // Оставляем только ссылку до первого пробела или таба, но не обрываем на словах сервисов
@@ -104,39 +125,6 @@ export default function App() {
     // Убираем точку и скобку в конце, если есть
     let cleaned = id.replace(/[.)]$/, '');
     return cleaned;
-  }
-
-  // Определяет, является ли строка кредитом по новым паттернам
-  function isCreditLine(line) {
-    // Явно ловим Credit:
-    if (/^Credit:/i.test(line)) return true;
-    // паттерн: @имя / платформа (с пробелами вокруг /, с опциональным тире и числом)
-    if (/^@[^\s/]+\s*\/\s*[^\s-]+(\s*-?\s*\d+\s*\S*)?$/i.test(line)) return true;
-    // паттерн: @имя / платформа (простой вариант без дополнительных символов)
-    if (/^@[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
-    // паттерн: @имя / платформа (с дополнительной информацией в скобках)
-    if (/^@[^\s/]+\s*\/\s*[^\s]+\([^)]+\)$/i.test(line)) return true;
-    // паттерн: @имя / платформа (с любыми символами в конце)
-    if (/^@[^\s/]+\s*\/\s*[^\s]+.*$/i.test(line)) return true;
-    // паттерн: кредит - @имя / платформа (с пробелами вокруг /, с опциональным тире и числом)
-    if (/^кредит\s*-\s*@?[^\s/]+\s*\/\s*[^\s-]+(\s*-?\s*\d+\s*\S*)?$/i.test(line)) return true;
-    // паттерн: кредит @имя / платформа (без тире)
-    if (/^кредит\s+@?[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
-    // паттерн: кредит - имя/платформа (без @)
-    if (/^кредит\s*-\s*[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
-    // паттерн: кредит имя/платформа (без тире и @)
-    if (/^кредит\s+[^\s/]+\s*\/\s*[^\s-]+/i.test(line)) return true;
-    // паттерн: кредит - @имя (без платформы)
-    if (/^кредит\s*-\s*@[^\s•]+/i.test(line)) return true;
-    // паттерн: имя/платформа (без кредит и без @)
-    if (/^[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
-    
-    // Отладочная информация
-    if (line.includes('кредит') || line.includes('@') || line.includes('/')) {
-      console.log('Потенциальный кредит не распознан:', line);
-    }
-    
-    return false;
   }
 
   const handleSynopsisUpload = async (e) => {
@@ -160,7 +148,7 @@ export default function App() {
         if (current) entries.push(current);
         const [id, title] = line.split(")", 2);
         current = {
-          id: cleanId(id.trim()),
+          id: id.trim(),
           title: title.trim(),
           credits: [],
           links: [],
@@ -169,97 +157,28 @@ export default function App() {
           voiceText: "",
           voiceTextRu: "",
         };
-      } else if (/https?:\/\//.test(line) && /Credit:/i.test(line)) {
-        // Если строка содержит ссылку и Credit: ...
-        // Например: https://youtu.be/2xb_Xo6jBgY?t=3 Credit: @ICON3DTech
-        const linkMatch = line.match(/https?:\/\/\S+/);
-        const creditMatch = line.match(/Credit:\s*([^\n]+)/i);
-        if (linkMatch) {
-          current?.links.push(cleanLinkString(linkMatch[0]));
-        }
-        if (creditMatch) {
-          current?.credits.push(creditMatch[1].trim());
-        }
-        // Если после Credit: есть ещё текст, добавить в comments
-        const afterCredit = creditMatch ? line.slice(line.indexOf(creditMatch[0]) + creditMatch[0].length).trim() : '';
-        if (afterCredit) current?.comments.push(afterCredit);
-      } else if (isCreditLine(line)) {
-        // Если строка содержит и кредит, и ссылку, разделяем их
-        let creditMatch = line.match(/(кредит\s*-?\s*[^\s]*\s*\/\s*[^\s]*)/i) || line.match(/(@[^\s]+\s*\/\s*[^\s]+)/i);
-        if (creditMatch) {
-          let creditStr = creditMatch[1].trim();
-          // Если кредит слипся с ссылкой, отделяем ссылку
-          let gluedLink = creditStr.match(/(https?:\/\/\S+)/);
-          if (gluedLink) {
-            // Кредит до ссылки
-            current?.credits.push(creditStr.slice(0, gluedLink.index).trim());
-            // Ссылка и всё после неё
-            let rest = creditStr.slice(gluedLink.index).trim() + ' ' + line.replace(creditMatch[1], '').trim();
-            // обработка ссылок и комментариев как обычно
-            let linkParts = rest.split(/\s*-\s*/).filter(Boolean);
-            for (let part of linkParts) {
-              if (/https?:\/\//.test(part)) {
-                const linkOnly = cleanLinkString(part);
-                current?.links.push(linkOnly);
-                const afterLink = part.slice(linkOnly.length).trim();
-                if (afterLink) current?.comments.push(afterLink);
-              } else if (part) {
-                current?.comments.push(part);
-              }
-            }
-          } else {
-            current?.credits.push(creditStr);
-            // Удаляем кредит из строки
-            let rest = line.replace(creditMatch[1], '').trim();
-            // Если после кредита есть ссылка, обработать её
-            if (/https?:\/\//.test(rest)) {
-              let linkParts = rest.split(/\s*-\s*/).filter(Boolean);
-              for (let part of linkParts) {
-                if (/https?:\/\//.test(part)) {
-                  const linkOnly = cleanLinkString(part);
-                  current?.links.push(linkOnly);
-                  const afterLink = part.slice(linkOnly.length).trim();
-                  if (afterLink) current?.comments.push(afterLink);
-                } else if (part) {
-                  current?.comments.push(part);
-                }
-              }
-            } else if (rest) {
-              current?.comments.push(rest);
-            }
-          }
-        } else {
-          current?.credits.push(line);
-        }
-      } else if (/^https?:\/\//.test(line)) {
-        // обработка ссылки
-        // Могут быть несколько ссылок через тире или пробел
-        let linkParts = line.split(/\s*-\s*/).filter(Boolean);
-        for (let part of linkParts) {
-          if (/https?:\/\//.test(part)) {
-            const linkOnly = cleanLinkString(part);
-            current?.links.push(linkOnly);
-            const afterLink = part.slice(linkOnly.length).trim();
-            if (afterLink) {
-              // Проверяем, не является ли послессылочный текст кредитом
-              if (isCreditLine(afterLink)) {
-                current?.credits.push(afterLink);
-              } else {
-                current?.comments.push(afterLink);
-              }
-            }
-          } else if (part) {
-            // Проверяем, не является ли часть кредитом
-            if (isCreditLine(part)) {
-              current?.credits.push(part);
-            } else {
-              current?.comments.push(part);
-            }
-          }
-        }
       } else {
-        // Проверяем, не является ли строка кредитом
-        if (isCreditLine(line)) {
+        // 1) Сначала извлекаем и сохраняем ВСЕ ссылки целиком
+        if (/https?:\/\//.test(line)) {
+          const urls = line.match(/https?:\/\/\S+/g) || [];
+          for (const url of urls) {
+            const linkOnly = replaceLinkAbbreviations(cleanLinkString(url));
+            current?.links.push(linkOnly);
+          }
+          // Удаляем ссылки из строки для дальнейшего анализа как кредит/комментарий
+          const withoutUrls = line.replace(/https?:\/\/\S+/g, "").trim();
+          if (withoutUrls) {
+            if (creditLogic.isCredit(withoutUrls)) {
+              current?.credits.push(withoutUrls);
+            } else {
+              current?.comments.push(withoutUrls);
+            }
+          }
+          continue;
+        }
+
+        // 2) Без ссылок: проверяем кредит
+        if (creditLogic.isCredit(line)) {
           current?.credits.push(line);
         } else {
           current?.comments.push(line);
@@ -365,15 +284,11 @@ export default function App() {
       if (scriptData[commentKey]) {
         entry.script_comments.push(scriptData[commentKey]);
       }
-      // Удаляем префиксы 'Credit', 'Credits', 'кредит', а также ':', '-', пробелы после них, и лишние пробелы в начале
       if (entry.credits && Array.isArray(entry.credits)) {
-        entry.credits = entry.credits.map(cleanCreditString);
-        entry.credits = entry.credits.map(replacePlatformAbbreviations);
+        entry.credits = entry.credits.map(creditLogic.clean);
       }
-      // Очищаем ссылки от лишних слов
       if (entry.links && Array.isArray(entry.links)) {
-        entry.links = entry.links.map(cleanLinkString);
-        entry.links = entry.links.map(replaceLinkAbbreviations);
+        entry.links = entry.links.map((l) => replaceLinkAbbreviations(cleanLinkString(l)));
       }
     }
 
