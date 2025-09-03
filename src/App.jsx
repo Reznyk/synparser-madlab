@@ -109,6 +109,7 @@ export default function App() {
   const creditLogic = {
     isCredit(line) {
       if (/^Credit:/i.test(line)) return true;
+      if (/^Credit\s+@[^\s/]+$/i.test(line)) return true;
       if (/^@[^\s/]+\s*\/\s*[^\s-]+(\s*-?\s*\d+\s*\S*)?$/i.test(line)) return true;
       if (/^@[^\s/]+\s*\/\s*[^\s]+$/i.test(line)) return true;
       if (/^@[^\s/]+\s*\/\s*[^\s]+\([^)]+\)$/i.test(line)) return true;
