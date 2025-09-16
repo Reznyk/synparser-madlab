@@ -225,12 +225,12 @@ export default function App() {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      if (/^\d+\s*[\.)]$/.test(line)) {
+      if (/^\d+\s*(?:[.)|])?$/.test(line)) {
         if (currentNum === null && buffer.length) {
           intro = [...buffer];
           buffer = [];
         } else if (currentNum !== null) {
-          const key = currentNum.split(/[\.)]/)[0].trim();
+          const key = (currentNum.match(/^\d+/) || [""])[0].trim();
           scriptMap[key] = buffer.join(" ").trim();
           if (comments[commentIndex]) {
             scriptMap[key + "_comment"] = comments[commentIndex].text;
@@ -245,7 +245,7 @@ export default function App() {
     }
 
     if (currentNum !== null) {
-      const key = currentNum.split(/[\.)]/)[0].trim();
+      const key = (currentNum.match(/^\d+/) || [""])[0].trim();
       scriptMap[key] = buffer.join(" ").trim();
       if (comments[commentIndex]) {
         scriptMap[key + "_comment"] = comments[commentIndex].text;
